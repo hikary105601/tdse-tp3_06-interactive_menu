@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 //=====[Declaration of public defines]=========================================
-
+#define DISPLAY_CHAR_WIDTH 16
 //=====[Declaration of public data types]======================================
 
 typedef enum {
