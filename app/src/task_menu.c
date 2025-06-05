@@ -126,19 +126,25 @@ void task_menu_init(void *parameters)
 	b_event = p_task_menu_dta->flag;
 	LOGGER_LOG("   %s = %s\r\n", GET_NAME(b_event), (b_event ? "true" : "false"));
 
+	cycle_counter_init();
+	cycle_counter_reset();
+
 	displayInit( DISPLAY_CONNECTION_GPIO_4BITS );
 
-    // Imprime el texto del menú principal, en dos filas
     displayCharPositionWrite(0, 0);
+	displayStringWrite("TdSE Bienvenidos");
+
+	displayCharPositionWrite(0, 1);
+	displayStringWrite("Test Nro: ");
+
+    // Imprime el texto del menú principal, en dos filas
+    /*displayCharPositionWrite(0, 0);
     text_info_motor_in_row(menu_str, 0, motor_cfg + 0);
     displayStringWrite(menu_str);
     displayCharPositionWrite(0, 1);
     text_info_motor_in_row(menu_str, 1, motor_cfg + 1);
     displayStringWrite(menu_str);
-
-	cycle_counter_init();
-	cycle_counter_reset();
-
+*/
 
 	g_task_menu_tick_cnt = G_TASK_MEN_TICK_CNT_INI;
 }
