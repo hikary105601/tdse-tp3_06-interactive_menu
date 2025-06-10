@@ -73,7 +73,7 @@ motor_cfg_t motor_cfg[] = {
 #define MOTOR_CFG_QTY (sizeof(motor_cfg)/sizeof(motor_cfg_t))
 
 uint32_t current_motor = 0;
-motor_cfg_type_t current_motor_cfg = POWER;
+motor_cfg_type_t current_motor_cfg_type = POWER;
 motor_cfg_t temp_motor_cfg;
 
 /********************** internal functions declaration ***********************/
@@ -83,11 +83,13 @@ void text_info_motor_in_row(char str[], uint8_t index, motor_cfg_t * cfg);
 void text_select_motor(char str[], uint8_t index);
 void text_select_config(char str[], motor_cfg_type_t type);
 void text_select_value(char str[],motor_cfg_t * cfg, motor_cfg_type_t type);
+void print_text_in_row(const char str[], uint8_t row);
 
 /********************** internal data definition *****************************/
 const char *p_task_menu 		= "Task Menu (Interactive Menu)";
 const char *p_task_menu_ 		= "Non-Blocking & Update By Time Code";
 const char header_text[]        = "Enter/Next/Back";
+const char empty_line[]			= "                ";
 
 /********************** external data declaration ****************************/
 uint32_t g_task_menu_cnt;
@@ -131,20 +133,16 @@ void task_menu_init(void *parameters)
 
 	displayInit( DISPLAY_CONNECTION_GPIO_4BITS );
 
-    displayCharPositionWrite(0, 0);
-	displayStringWrite("TdSE Bienvenidos");
-
-	displayCharPositionWrite(0, 1);
-	displayStringWrite("Test Nro: ");
-
     // Imprime el texto del menú principal, en dos filas
-    /*displayCharPositionWrite(0, 0);
+
     text_info_motor_in_row(menu_str, 0, motor_cfg + 0);
-    displayStringWrite(menu_str);
-    displayCharPositionWrite(0, 1);
+    print_text_in_row(menu_str, 0);
+
     text_info_motor_in_row(menu_str, 1, motor_cfg + 1);
-    displayStringWrite(menu_str);
-*/
+    print_text_in_row(menu_str, 1);
+
+    // pongo el motor 0 a configurar por defecto.
+    temp_motor_cfg = motor_cfg[0];
 
 	g_task_menu_tick_cnt = G_TASK_MEN_TICK_CNT_INI;
 }
@@ -190,7 +188,6 @@ void task_menu_update(void *parameters)
             continue;
 		}
 
-
         p_task_menu_dta->tick = DEL_MEN_XX_MAX;
 
         if (true == any_event_task_menu())
@@ -207,12 +204,11 @@ void task_menu_update(void *parameters)
                 p_task_menu_dta->flag = false;
 
                 // Imprime el texto del menú principal, en dos filas
-                displayCharPositionWrite(0, 0);
                 text_info_motor_in_row(menu_str, 0, motor_cfg + 0);
-                displayStringWrite(menu_str);
-                displayCharPositionWrite(0, 1);
+                print_text_in_row(menu_str, 0);
+
                 text_info_motor_in_row(menu_str, 1, motor_cfg + 1);
-                displayStringWrite(menu_str);
+                print_text_in_row(menu_str, 1);
 
 
                 switch (p_task_menu_dta->event) {
@@ -224,17 +220,18 @@ void task_menu_update(void *parameters)
                         break;
                 }
 
+                break;
+
             case ST_MEN_XX_SELECT_MOTOR:
                 if (!p_task_menu_dta->flag)
                     break;
 
                 p_task_menu_dta->flag = false;
 
-                displayCharPositionWrite(0, 0);
-                displayStringWrite(header_text);
-                displayCharPositionWrite(0, 1);
+                print_text_in_row(header_text, 0);
+
                 text_select_motor(menu_str, current_motor);
-                displayStringWrite(menu_str);
+                print_text_in_row(menu_str, 1);
 
                 switch (p_task_menu_dta->event) {
                     case EV_MEN_ENT_ACTIVE:
@@ -251,6 +248,10 @@ void task_menu_update(void *parameters)
                         break;
 
                     case EV_MEN_ESC_ACTIVE:
+                    	// devuelve el motor seleccionado al por defecto
+                    	current_motor = 0;
+                    	temp_motor_cfg = motor_cfg[0];
+
                         p_task_menu_dta->state = ST_MEN_XX_MAIN;
                         break;
 
@@ -258,17 +259,18 @@ void task_menu_update(void *parameters)
                         break;
                 }
 
+                break;
+
             case ST_MEN_XX_SELECT_CONFIG:
                 if (!p_task_menu_dta->flag)
                     break;
 
                 p_task_menu_dta->flag = false;
 
-                displayCharPositionWrite(0, 0);
-                displayStringWrite(header_text);
-                displayCharPositionWrite(0, 1);
-                text_select_config(menu_str, current_motor_cfg);
-                displayStringWrite(menu_str);
+                print_text_in_row(header_text, 0);
+
+                text_select_config(menu_str, current_motor_cfg_type);
+                print_text_in_row(menu_str, 1);
 
                 switch (p_task_menu_dta->event) {
                     case EV_MEN_ENT_ACTIVE:
@@ -277,10 +279,13 @@ void task_menu_update(void *parameters)
 
                     case EV_MEN_NEX_ACTIVE:
                         // cambia entre power, speed y spin
-                        current_motor_cfg = next_motor_cfg(current_motor_cfg);
+                        current_motor_cfg_type = next_motor_cfg(current_motor_cfg_type);
                         break;
 
                     case EV_MEN_ESC_ACTIVE:
+                    	// devuelve la selección de configuración a por defecto
+                    	current_motor_cfg_type = POWER;
+
                         p_task_menu_dta->state = ST_MEN_XX_SELECT_MOTOR;
                         break;
 
@@ -288,26 +293,36 @@ void task_menu_update(void *parameters)
                         break;
                 }
 
+                break;
+
             case ST_MEN_XX_SELECT_VALUE:
                 if (!p_task_menu_dta->flag)
                     break;
 
                 p_task_menu_dta->flag = false;
 
-                displayCharPositionWrite(0, 0);
-                displayStringWrite(header_text);
-                displayCharPositionWrite(0, 1);
-                text_select_value(menu_str, &temp_motor_cfg, current_motor_cfg);
-                displayStringWrite(menu_str);
+                print_text_in_row(header_text, 0);
+
+                text_select_value(menu_str, &temp_motor_cfg, current_motor_cfg_type);
+                print_text_in_row(menu_str, 1);
 
                 switch (p_task_menu_dta->event) {
                     case EV_MEN_ENT_ACTIVE:
                         // guardar valor seleccionado
                         motor_cfg[current_motor] = temp_motor_cfg;
+
+                        // reinicia las variables de selección de configuración
+                        current_motor = 0;
+                        current_motor_cfg_type = POWER;
+                        temp_motor_cfg = motor_cfg[0];
+
+                        p_task_menu_dta->state = ST_MEN_XX_MAIN;
+
                         break;
+
                     case EV_MEN_NEX_ACTIVE:
                         // cambia el valor de la configuración selecionada
-                        change_current_cfg(&temp_motor_cfg, current_motor_cfg);
+                        change_current_cfg(&temp_motor_cfg, current_motor_cfg_type);
                         break;
 
                     case EV_MEN_ESC_ACTIVE:
@@ -317,6 +332,8 @@ void task_menu_update(void *parameters)
                     default:
                         break;
                 }
+
+                break;
 
             default:
 
@@ -348,17 +365,20 @@ void change_current_cfg(motor_cfg_t * cfg, motor_cfg_type_t type) {
     case POWER:
         cfg->power = !cfg->power;
         break;
+
     case SPEED:
         cfg->speed++;
-        if (cfg->speed >= MAX_SPEED)
+        if (cfg->speed > MAX_SPEED)
             cfg->speed = 0;
         break;
+
     case SPIN:
         if (cfg->spin == LEFT)
             cfg->spin = RIGHT;
         else
             cfg->spin = LEFT;
         break;
+
     default:
         break;
     }
@@ -413,5 +433,13 @@ void text_select_value(char str[],motor_cfg_t * cfg, motor_cfg_type_t type) {
     }
 
 }
+
+void print_text_in_row(const char str[], uint8_t row) {
+    displayCharPositionWrite(0, row);
+    displayStringWrite(empty_line);
+    displayCharPositionWrite(0, row);
+    displayStringWrite(str);
+}
+
 
 /********************** end of file ******************************************/
